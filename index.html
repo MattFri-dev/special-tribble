@@ -1,75 +1,109 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arctic Marine Dashboard</title>
-  <script src="https://openlayers.org/en/v6.15.1/build/ol.js"></script>
-  <link rel="stylesheet" href="https://openlayers.org/en/v6.15.1/css/ol.css">
- bot { padding: 1em; background: #e0f7fa; }
-    #chatlog { height: 150px; overflow-y: auto; background: #fff; padding: 0.5em; border: 1px solid #ccc; }
-    #userInput { width: 80%; }
+  <title>Arctic 3D Visualization</title>
+  https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <style>
+    html, body, #cesiumContainer {
+      width: 100%; height: 100%; margin: 0; padding: 0; background-color: #000;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    #layerControl {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(20, 20, 20, 0.8);
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 100;
+    }
+    #layerControl label {
+      display: block;
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>Arctic Marine Environmental Dashboard</h1>
-  <div id="map"></div>
-  <div id="dashboard">
-    <h2>Layer Controls</h2>
-    <select id="layerSelect">
-      <option value="MODIS_Terra_Sea_Ice">Sea Ice</option>
-      <option value="MODIS_Aqua_L3_SST_MidIR_4km_Day">Sea Surface Temperature</option>
-    </select>
-    <input type="date" id="datePicker" />
-    <button onclick="updateLayer()">Update Layer</button>
-  </div>
-  <div id="chatbot">
-    <h2>Ask the Arctic AI</h2>
-    <div id="chatlog"></div>
-    <input type="text" id="userInput" placeholder="Ask about sea ice trends..." />
-    <button onclick="sendMessage()">Send</button>
+  <div id="cesiumContainer"></div>
+  <div id="layerControl">
+    <label><input type="checkbox" id="seaIce" checked> Sea Ice</label>
+    <label><input type="checkbox" id="sst" checked> Sea Surface Temp</label>
+    <label><input type="checkbox" id="wind" checked> Wind</label>
+    <label><input type="checkbox" id="currents" checked> Ocean Currents</label>
   </div>
 
   <script>
-    const map = new ol.Map({
-      target: 'map',
-      layers: [
-        new ol.layer.Tile({
-          source: new ol.source.XYZ({
-            url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Sea_Ice/default/2025-10-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png'
-          })
-        })
-      ],
-      view: new ol.View({
-        center: ol.proj.fromLonLat([-100, 75]),
-        zoom: 3
-      })
+    Cesium.Ion.defaultAccessToken = 'your-cesium-ion-access-token'; // Optional if using Cesium Ion assets
+
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      imageryProvider: false,
+      baseLayerPicker: false,
+      timeline: false,
+      animation: false,
+      sceneMode: Cesium.SceneMode.SCENE3D,
+      globe: true,
+      terrainProvider: Cesium.createWorldTerrain()
     });
 
-    function updateLayer() {
-      const layer = document.getElementById('layerSelect').value;
-      const date = document.getElementById('datePicker').value;
-      const url = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
-      map.getLayers().item(0).setSource(new ol.source.XYZ({ url }));
+    viewer.scene.globe.enableLighting = true;
+    viewer.scene.skyAtmosphere.brightnessShift = -0.4;
+
+    const layers = {
+      seaIce: viewer.imageryLayers.addImageryProvider(new Cesium.WebMapTileServiceImageryProvider({
+        url: 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/MODIS_Terra_Sea_Ice/default/2025-10-01/GoogleMapsCompatible_Level9/{TileMatrix}/{TileRow}/{TileCol}.png',
+        layer: 'MODIS_Terra_Sea_Ice',
+        style: 'default',
+        format: 'image/png',
+        tileMatrixSetID: 'GoogleMapsCompatible_Level9',
+        maximumLevel: 9,
+        credit: 'NASA GIBS'
+      })),
+
+      sst: viewer.imageryLayers.addImageryProvider(new Cesium.WebMapTileServiceImageryProvider({
+        url: 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/MODIS_Aqua_L3_SST_MidIR_4km_Day/default/2025-10-01/GoogleMapsCompatible_Level9/{TileMatrix}/{TileRow}/{TileCol}.png',
+        layer: 'MODIS_Aqua_L3_SST_MidIR_4km_Day',
+        style: 'default',
+        format: 'image/png',
+        tileMatrixSetID: 'GoogleMapsCompatible_Level9',
+        maximumLevel: 9,
+        credit: 'NASA GIBS'
+      })),
+
+      wind: viewer.imageryLayers.addImageryProvider(new Cesium.WebMapTileServiceImageryProvider({
+        url: 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/OSCAR_currents_wind/default/2025-10-01/GoogleMapsCompatible_Level9/{TileMatrix}/{TileRow}/{TileCol}.png',
+        layer: 'OSCAR_currents_wind',
+        style: 'default',
+        format: 'image/png',
+        tileMatrixSetID: 'GoogleMapsCompatible_Level9',
+        maximumLevel: 9,
+        credit: 'NASA GIBS'
+      })),
+
+      currents: viewer.imageryLayers.addImageryProvider(new Cesium.WebMapTileServiceImageryProvider({
+        url: 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/OSCAR_currents_ocean/default/2025-10-01/GoogleMapsCompatible_Level9/{TileMatrix}/{TileRow}/{TileCol}.png',
+        layer: 'OSCAR_currents_ocean',
+        style: 'default',
+        format: 'image/png',
+        tileMatrixSetID: 'GoogleMapsCompatible_Level9',
+        maximumLevel: 9,
+        credit: 'NASA GIBS'
+      }))
+    };
+
+    function toggleLayer(layerId) {
+      const checkbox = document.getElementById(layerId);
+      layers[layerId].show = checkbox.checked;
     }
 
-    function sendMessage() {
-      const input = document.getElementById('userInput').value;
-      const chatlog = document.getElementById('chatlog');
-      const userMsg = `<p><strong>You:</strong> ${input}</p>`;
-      chatlog.innerHTML += userMsg;
-
-      // Simulated AI response (replace with actual API call)
-      let response = "I'm analyzing recent trends...";
-      if (input.toLowerCase().includes("sea ice")) {
-        response = "Sea ice extent has shown a decreasing trend over the past decade, especially in late summer months.";
-      } {
-        response = "Sea surface temperatures have increased by 1.5°C in the Beaufort Sea since 2010.";
-      }
-
-      chatlog.innerHTML += `<p><strong>AI:</strong> ${response}</p>`;
-      document.getElementById('userInput').value = "";
-    }
+    document.getElementById('seaIce').addEventListener('change', () => toggleLayer('seaIce'));
+    document.getElementById('sst').addEventListener('change', () => toggleLayer('sst'));
+    document.getElementById('wind').addEventListener('change', () => toggleLayer('wind'));
+    document.getElementById('currents').addEventListener('change', () => toggleLayer('currents'));
   </script>
 </body>
 </html>
