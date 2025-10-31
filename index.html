@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arctic 3D Visualization</title>
+  <title>Arctic Physical Model</title>
   https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
@@ -11,29 +11,70 @@
       width: 100%; height: 100%; margin: 0; padding: 0; background-color: #000;
       font-family: 'Segoe UI', sans-serif;
     }
-    #layerControl {
+    #layerControl, #legendPanel {
       position: absolute;
       top: 10px;
       left: 10px;
-      background: rgba(20, 20, 20, 0.8);
+      background: rgba(20, 20, 20, 0.85);
       color: #fff;
       padding: 10px;
       border-radius: 8px;
       z-index: 100;
+      font-size: 14px;
     }
-    #layerControl label {
-      display: block;
-      margin-bottom: 5px;
+    #legendPanel {
+      top: auto;
+      bottom: 10px;
+      left: 10px;
+    }
+    #titleBar {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #00ffff;
+      padding: 10px 20px;
+      font-size: 24px;
+      font-weight: bold;
+      font-family: 'Orbitron', sans-serif;
+      border: 2px solid #00ffff;
+      border-radius: 10px;
+      z-index: 100;
+    }
+    #timeSlider {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      z-index: 100;
+      background: rgba(20, 20, 20, 0.85);
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
+  <div id="titleBar">Arctic Physical Model</div>
   <div id="layerControl">
-    <label><input type="checkbox" id="seaIce" checked> Sea Ice</label>
-    <label><input type="checkbox" id="sst" checked> Sea Surface Temp</label>
+    <label><input type="checkbox" id="sst" checked> SST (GHRSST MUR)</label>
+    <label><input type="checkbox" id="seaIce" checked> Sea Ice Concentration</label>
     <label><input type="checkbox" id="wind" checked> Wind</label>
     <label><input type="checkbox" id="currents" checked> Ocean Currents</label>
+  </div>
+  <div id="legendPanel">
+    <strong>Legend:</strong>
+    <ul>
+      <li>🌡️ SST: GHRSST MUR L4</li>
+      <li>🧊 Sea Ice: OSISAF Concentration</li>
+      <li>💨 Wind: OSCAR Wind Vectors</li>
+      <li>🌊 Currents: OSCAR Ocean Currents</li>
+    </ul>
+  </div>
+  <div id="timeSlider">
+    <label for="datePicker">Select Date:</label>
+    <input type="date" id="datePicker" value="2023-07-01" />
+    <button onclick="updateLayers()">Update</button>
   </div>
 
   <script>
@@ -47,6 +88,8 @@
 
     viewer.scene.globe.enableLighting = true;
     viewer.scene.skyAtmosphere.brightnessShift = -0.4;
+
+    let layers = {};
 
     function addGIBSLayer(layerName, date) {
       return viewer.imageryLayers.addImageryProvider(new Cesium.WebMapTileServiceImageryProvider({
@@ -63,24 +106,33 @@
       }));
     }
 
-    const date = '2023-07-01'; // Use a known valid date
+    function loadLayers(date) {
+      Object.values(layers).forEach(layer => viewer.imageryLayers.remove(layer));
 
-    const layers = {
-      seaIce: addGIBSLayer('MODIS_Terra_Sea_Ice', date),
-      sst: addGIBSLayer('MODIS_Aqua_L3_SST_MidIR_4km_Day', date),
-      wind: addGIBSLayer('OSCAR_currents_wind', date),
-      currents: addGIBSLayer('OSCAR_currents_ocean', date)
-    };
+      layers = {
+        sst: addGIBSLayer('GHRSST_L4_MUR_Sea_Surface_Temperature', date),
+        seaIce: addGIBSLayer('OSISAF_Sea_Ice_Concentration', date),
+        wind: addGIBSLayer('OSCAR_currents_wind', date),
+        currents: addGIBSLayer('OSCAR_currents_ocean', date)
+      };
+    }
+
+    function updateLayers() {
+      const date = document.getElementById('datePicker').value;
+      loadLayers(date);
+    }
 
     function toggleLayer(layerId) {
       const checkbox = document.getElementById(layerId);
-      layers[layerId].show = checkbox.checked;
+      if (layers[layerId]) layers[layerId].show = checkbox.checked;
     }
 
-    document.getElementById('seaIce').addEventListener('change', () => toggleLayer('seaIce'));
     document.getElementById('sst').addEventListener('change', () => toggleLayer('sst'));
+    document.getElementById('seaIce').addEventListener('change', () => toggleLayer('seaIce'));
     document.getElementById('wind').addEventListener('change', () => toggleLayer('wind'));
     document.getElementById('currents').addEventListener('change', () => toggleLayer('currents'));
+
+    loadLayers(document.getElementById('datePicker').value);
   </script>
 </body>
 </html>
