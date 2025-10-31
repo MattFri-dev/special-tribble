@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arctic Marine Dashboard</title>
+  <script src="https://openlayers.org/en/v6.15.1/build/ol.js"></script>
+  <link rel="stylesheet" href="https://openlayers.org/en/v6.15.1/css/ol.css">
+ bot { padding: 1em; background: #e0f7fa; }
+    #chatlog { height: 150px; overflow-y: auto; background: #fff; padding: 0.5em; border: 1px solid #ccc; }
+    #userInput { width: 80%; }
+  </style>
+</head>
+<body>
+  <h1>Arctic Marine Environmental Dashboard</h1>
+  <div id="map"></div>
+  <div id="dashboard">
+    <h2>Layer Controls</h2>
+    <select id="layerSelect">
+      <option value="MODIS_Terra_Sea_Ice">Sea Ice</option>
+      <option value="MODIS_Aqua_L3_SST_MidIR_4km_Day">Sea Surface Temperature</option>
+    </select>
+    <input type="date" id="datePicker" />
+    <button onclick="updateLayer()">Update Layer</button>
+  </div>
+  <div id="chatbot">
+    <h2>Ask the Arctic AI</h2>
+    <div id="chatlog"></div>
+    <input type="text" id="userInput" placeholder="Ask about sea ice trends..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const map = new ol.Map({
+      target: 'map',
+      layers: [
+        new ol.layer.Tile({
+          source: new ol.source.XYZ({
+            url: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Sea_Ice/default/2025-10-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png'
+          })
+        })
+      ],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([-100, 75]),
+        zoom: 3
+      })
+    });
+
+    function updateLayer() {
+      const layer = document.getElementById('layerSelect').value;
+      const date = document.getElementById('datePicker').value;
+      const url = `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
+      map.getLayers().item(0).setSource(new ol.source.XYZ({ url }));
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('userInput').value;
+      const chatlog = document.getElementById('chatlog');
+      const userMsg = `<p><strong>You:</strong> ${input}</p>`;
+      chatlog.innerHTML += userMsg;
+
+      // Simulated AI response (replace with actual API call)
+      let response = "I'm analyzing recent trends...";
+      if (input.toLowerCase().includes("sea ice")) {
+        response = "Sea ice extent has shown a decreasing trend over the past decade, especially in late summer months.";
+      } {
+        response = "Sea surface temperatures have increased by 1.5°C in the Beaufort Sea since 2010.";
+      }
+
+      chatlog.innerHTML += `<p><strong>AI:</strong> ${response}</p>`;
+      document.getElementById('userInput').value = "";
+    }
+  </script>
+</body>
+</html>
